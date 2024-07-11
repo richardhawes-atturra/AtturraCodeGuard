@@ -25,9 +25,9 @@ jobs:
       id: fetch-token
       run: |
         echo "Fetching OAuth 2.0 token..."
-        response=$(curl -X POST "${{ secrets.ATTURRA_CODEGUARD_ACCESS_TOKEN_URL }}" \
+        response=$(curl -X POST "${{ variables.ATTURRA_CODEGUARD_ACCESS_TOKEN_URL }}" \
           -H "Content-Type: application/x-www-form-urlencoded" \
-          -d "client_id=${{ secrets.ATTURRA_CODEGUARD_CLIENT_ID }}&client_secret=${{ secrets.ATTURRA_CODEGUARD_CLIENT_SECRET }}&scope=${{ secrets.ATTURRA_CODEGUARD_SCOPE }}&grant_type=${{ secrets.ATTURRA_CODEGUARD_GRANT_TYPE }}")
+          -d "client_id=${{ secrets.ATTURRA_CODEGUARD_CLIENT_ID }}&client_secret=${{ secrets.ATTURRA_CODEGUARD_CLIENT_SECRET }}&scope=${{ variables.ATTURRA_CODEGUARD_SCOPE }}&grant_type=${{ variables.ATTURRA_CODEGUARD_GRANT_TYPE }}")
         echo "Response: $response"
         token=$(echo $response | python -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
         echo "Token: $token"
@@ -37,7 +37,7 @@ jobs:
       id: invoke-api
       run: |
         echo "Invoking API..."
-        apiUrl="${{ secrets.ATTURRA_CODEGUARD_HOST }}/codeGuard/v1/accounts/${{ secrets.ATTURRA_CODEGUARD_BOOMI_ACCOUNT_ID }}/components/parent/${{ github.event.inputs.parentComponentId }}/review"
+        apiUrl="${{ variables.ATTURRA_CODEGUARD_HOST }}/codeGuard/v1/accounts/${{ variables.ATTURRA_CODEGUARD_BOOMI_ACCOUNT_ID }}/components/parent/${{ github.event.inputs.parentComponentId }}/review"
         echo "API URL: $apiUrl"
         status_code=$(curl -o api_response.xml -w "%{http_code}" -X GET "$apiUrl" \
           -H "Authorization: Bearer ${{ steps.fetch-token.outputs.token }}" \
@@ -57,10 +57,20 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: api-response
-        path: api_response.xml
+        path: ${{ github.event.inputs.parentComponentId }}-codeguard-review-report.xml.xml
 
     - name: Publish JUnit Test Report
       if: success()
       uses: mikepenz/action-junit-report@v2
       with:
-        report_paths: 'api_response.xml'
+        report_paths: '${{ github.event.inputs.parentComponentId }}-codeguard-review-report.xml'
+
+    - name: Check Test Results
+      if: success()
+      run: |
+        # Check if there are failures in the JUnit report
+        failures=$(grep -c '<failure' "${{ github.event.inputs.parentComponentId }}-codeguard-review-report.xml")
+        if [ $failures -gt 0 ]; then
+          echo "JUnit report contains failures. Failing the workflow."
+          exit 1
+        fi
