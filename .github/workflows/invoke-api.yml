@@ -69,7 +69,7 @@ jobs:
       if: success()
       run: |
         # Check if there are failures in the JUnit report
-        failures=$(grep -c '<failure' "./api-response.xml")
+        failures=$(grep -c '<failure' "./api_response.xml")
         if [ $failures -gt 0 ]; then
           echo "JUnit report contains failures. Failing the workflow."
           exit 1
