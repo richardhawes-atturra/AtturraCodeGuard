@@ -1,4 +1,5 @@
 name: Atturra CodeGuard Review Test
+
 on:
   workflow_dispatch:
     inputs:
@@ -39,4 +40,24 @@ jobs:
           -H "Authorization: Bearer ${{ steps.fetch-token.outputs.token }}" \
           -H "Accept: application/xml" \
           -H "API-Key: ${{ secrets.ATTURRA_CODEGUARD_API_KEY }}" \
-          -H "AS-Authorisation: ${{ secrets.ATTUR
+          -H "AS-Authorisation: ${{ secrets.ATTURRA_CODEGUARD_BOOMI_ATMOSPHERE_BASIC_AUTH }}")
+        
+        echo "Status code: $status_code"
+        if [ "$status_code" -ne 200 ]; then
+          echo "API call failed with status code $status_code"
+          cat api_response.xml
+          exit 1
+        fi
+
+    - name: Publish Test Results
+      if: success()
+      uses: actions/upload-artifact@v2
+      with:
+        name: api-response
+        path: api_response.xml
+
+    - name: Publish JUnit Test Report
+      if: success()
+      uses: mikepenz/action-junit-report@v2
+      with:
+        report_paths: 'api_response.xml'
