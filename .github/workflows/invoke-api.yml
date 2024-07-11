@@ -63,13 +63,13 @@ jobs:
       if: success()
       uses: mikepenz/action-junit-report@v2
       with:
-        report_paths: 'api-response.xml'
+        report_paths: './api_response.xml' 
 
     - name: Check Test Results
       if: success()
       run: |
         # Check if there are failures in the JUnit report
-        failures=$(grep -c '<failure' "api-response.xml")
+        failures=$(grep -c '<failure' "./api-response.xml")
         if [ $failures -gt 0 ]; then
           echo "JUnit report contains failures. Failing the workflow."
           exit 1
