@@ -25,9 +25,9 @@ jobs:
       id: fetch-token
       run: |
         echo "Fetching OAuth 2.0 token..."
-        response=$(curl -X POST "${{ secrets.ATTURRA_CODEGUARD_ACCESS_TOKEN_URL }}" \
+        response=$(curl -X POST "${{ env.ATTURRA_CODEGUARD_ACCESS_TOKEN_URL }}" \
           -H "Content-Type: application/x-www-form-urlencoded" \
-          -d "client_id=${{ secrets.ATTURRA_CODEGUARD_CLIENT_ID }}&client_secret=${{ secrets.ATTURRA_CODEGUARD_CLIENT_SECRET }}&scope=${{ secrets.ATTURRA_CODEGUARD_SCOPE }}&grant_type=${{ secrets.ATTURRA_CODEGUARD_GRANT_TYPE }}")
+          -d "client_id=${{ secrets.ATTURRA_CODEGUARD_CLIENT_ID }}&client_secret=${{ secrets.ATTURRA_CODEGUARD_CLIENT_SECRET }}&scope=${{ env.ATTURRA_CODEGUARD_SCOPE }}&grant_type=${{ env.ATTURRA_CODEGUARD_GRANT_TYPE }}")
         echo "Response: $response"
         token=$(echo $response | python -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
         echo "Token: $token"
@@ -37,7 +37,7 @@ jobs:
       id: invoke-api
       run: |
         echo "Invoking API..."
-        apiUrl="${{ secrets.ATTURRA_CODEGUARD_HOST }}/codeGuard/v1/accounts/${{ secrets.ATTURRA_CODEGUARD_BOOMI_ACCOUNT_ID }}/components/parent/${{ github.event.inputs.parentComponentId }}/review"
+        apiUrl="${{ env.ATTURRA_CODEGUARD_HOST }}/codeGuard/v1/accounts/${{ env.ATTURRA_CODEGUARD_BOOMI_ACCOUNT_ID }}/components/parent/${{ github.event.inputs.parentComponentId }}/review"
         echo "API URL: $apiUrl"
         status_code=$(curl -o api_response.xml -w "%{http_code}" -X GET "$apiUrl" \
           -H "Authorization: Bearer ${{ steps.fetch-token.outputs.token }}" \
