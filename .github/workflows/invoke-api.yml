@@ -48,7 +48,7 @@ jobs:
         echo "Status code: $status_code"
         if [ "$status_code" -ne 200 ]; then
           echo "API call failed with status code $status_code"
-          cat ${{ github.event.inputs.parentComponentId }}-codeguard-review-report.xml
+          cat api-response.xml
           exit 1
         fi
 
@@ -57,19 +57,19 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: api-response
-        path: ${{ github.event.inputs.parentComponentId }}-codeguard-review-report.xml
+        path: api-response.xml
 
     - name: Publish JUnit Test Report
       if: success()
       uses: mikepenz/action-junit-report@v2
       with:
-        report_paths: '${{ github.event.inputs.parentComponentId }}-codeguard-review-report.xml'
+        report_paths: 'api-response.xml'
 
     - name: Check Test Results
       if: success()
       run: |
         # Check if there are failures in the JUnit report
-        failures=$(grep -c '<failure' "${{ github.event.inputs.parentComponentId }}-codeguard-review-report.xml")
+        failures=$(grep -c '<failure' "api-response.xml")
         if [ $failures -gt 0 ]; then
           echo "JUnit report contains failures. Failing the workflow."
           exit 1
