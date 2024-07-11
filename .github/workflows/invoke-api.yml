@@ -1,0 +1,66 @@
+name: Invoke API and Publish Test Results
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  invoke-and-publish:
+    runs-on: ubuntu-latest
+
+    parameters:
+      parentComponentId:
+        type: string
+        default: 'default-parent-component-id'
+        description: 'Parent Component ID'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Fetch OAuth 2.0 token
+      id: fetch-token
+      run: |
+        echo "Fetching OAuth 2.0 token..."
+        response=$(curl -X POST "${{ secrets.ATTURRA_CODEGUARD_ACCESS_TOKEN_URL }}" \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "client_id=${{ secrets.ATTURRA_CODEGUARD_CLIENT_ID }}&client_secret=${{ secrets.ATTURRA_CODEGUARD_CLIENT_SECRET }}&scope=${{ secrets.ATTURRA_CODEGUARD_SCOPE }}&grant_type=${{ secrets.ATTURRA_CODEGUARD_GRANT_TYPE }}")
+        token=$(echo $response | python -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
+        echo "::set-output name=token::$token"
+
+    - name: Invoke API
+      id: invoke-api
+      run: |
+        echo "Invoking API..."
+        apiUrl="${{ secrets.ATTURRA_CODEGUARD_HOST }}/codeGuard/v1/accounts/${{ secrets.ATTURRA_CODEGUARD_BOOMI_ACCOUNT_ID }}/components/parent/${{ github.event.inputs.parentComponentId }}/review"
+        status_code=$(curl -o api_response.xml -w "%{http_code}" -X GET "$apiUrl" \
+          -H "Authorization: Bearer ${{ steps.fetch-token.outputs.token }}" \
+          -H "Accept: application/xml" \
+          -H "API-Key: ${{ secrets.ATTURRA_CODEGUARD_API_KEY }}" \
+          -H "AS-Authorisation: ${{ secrets.ATTURRA_CODEGUARD_BOOMI_ATMOSPHERE_BASIC_AUTH }}")
+        
+        echo "Status code: $status_code"
+        if [ "$status_code" -ne 200 ]; then
+          echo "API call failed with status code $status_code"
+          cat api_response.xml
+          exit 1
+        fi
+
+    - name: Publish Test Results
+      if: success()
+      uses: actions/upload-artifact@v2
+      with:
+        name: api-response
+        path: api_response.xml
+
+    - name: Publish JUnit Test Report
+      if: success()
+      uses: mikepenz/action-junit-report@v2
+      with:
+        report_paths: 'api_response.xml'
