@@ -1,4 +1,5 @@
 name: Atturra CodeGuard Review Test
+name: Invoke API and Publish Test Results
 
 on:
   workflow_dispatch:
@@ -14,10 +15,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x'
 
@@ -28,7 +29,9 @@ jobs:
         response=$(curl -X POST "${{ secrets.ATTURRA_CODEGUARD_ACCESS_TOKEN_URL }}" \
           -H "Content-Type: application/x-www-form-urlencoded" \
           -d "client_id=${{ secrets.ATTURRA_CODEGUARD_CLIENT_ID }}&client_secret=${{ secrets.ATTURRA_CODEGUARD_CLIENT_SECRET }}&scope=${{ secrets.ATTURRA_CODEGUARD_SCOPE }}&grant_type=${{ secrets.ATTURRA_CODEGUARD_GRANT_TYPE }}")
+        echo "Response: $response"
         token=$(echo $response | python -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
+        echo "Token: $token"
         echo "::set-output name=token::$token"
 
     - name: Invoke API
@@ -36,6 +39,7 @@ jobs:
       run: |
         echo "Invoking API..."
         apiUrl="${{ secrets.ATTURRA_CODEGUARD_HOST }}/codeGuard/v1/accounts/${{ secrets.ATTURRA_CODEGUARD_BOOMI_ACCOUNT_ID }}/components/parent/${{ github.event.inputs.parentComponentId }}/review"
+        echo "API URL: $apiUrl"
         status_code=$(curl -o api_response.xml -w "%{http_code}" -X GET "$apiUrl" \
           -H "Authorization: Bearer ${{ steps.fetch-token.outputs.token }}" \
           -H "Accept: application/xml" \
@@ -51,7 +55,7 @@ jobs:
 
     - name: Publish Test Results
       if: success()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: api-response
         path: api_response.xml
