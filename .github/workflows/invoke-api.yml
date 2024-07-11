@@ -51,17 +51,13 @@ jobs:
           cat api-response.xml
           exit 1
         fi
-
-    - name: Debug List files
-      run: ls -R
     
     - name: Publish Test Results
       if: success()
       uses: actions/upload-artifact@v3
       with:
         name: api-response
-        path: api-response.xml
-
+        path: ./api_response.xml
 
     - name: Publish JUnit Test Report
       if: success()
