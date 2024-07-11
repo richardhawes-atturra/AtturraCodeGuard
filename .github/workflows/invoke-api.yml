@@ -1,5 +1,4 @@
 name: Atturra CodeGuard Review Test
-name: Invoke API and Publish Test Results
 
 on:
   workflow_dispatch:
